@@ -281,8 +281,18 @@ class GameScene : Scene() {
 
             onScroll {
                 val zoomFactor = if (it.scrollDeltaYPixels < 0) 1.1 else 0.9
+                
+                val mouseWorldPosBefore = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
+                
                 val newZoom = worldRenderer.tileDisplaySize * zoomFactor
                 worldRenderer.tileDisplaySize = newZoom.coerceIn(worldRenderer.minZoom, worldRenderer.maxZoom)
+                
+                val mouseWorldPosAfter = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
+                
+                worldRenderer.currentOffset -= Point(
+                    mouseWorldPosAfter.x - mouseWorldPosBefore.x,
+                    mouseWorldPosAfter.y - mouseWorldPosBefore.y,
+                )
             }
         }
     }
