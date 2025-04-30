@@ -58,29 +58,29 @@ class Chunk(
     val entities: Array<Array<Entity?>>
 ) {
     fun render(ctx: RenderContext, tileSize: Double, xOffset: Double, yOffset: Double, textures: TexturesStore) {
-        for (x in 0..<16) {
-            for (y in 0..<16) {
-                val tile = tiles[x][y]
-                val bitmap = when (tile.type) {
-                    TileType.GRASS -> textures.grass
-                    TileType.WATER -> textures.water
-                    TileType.COAL_ORE -> textures.coal
-                }
+        ctx.useBatcher { batcher ->
+            for (x in 0..<16) {
+                for (y in 0..<16) {
+                    val tile = tiles[x][y]
+                    val bitmap = when (tile.type) {
+                        TileType.GRASS -> textures.grass
+                        TileType.WATER -> textures.water
+                        TileType.COAL_ORE -> textures.coal
+                    }
 
-                val tex = ctx.getTex(bitmap)
+                    val tex = ctx.getTex(bitmap)
 
-                val textureCoords = TextureCoords(
-                    tex,
-                    RectCoords(
-                        0f, 0f,
-                        1f, 0f,
-                        1f, 1f,
-                        0f, 1f
+                    val textureCoords = TextureCoords(
+                        tex,
+                        RectCoords(
+                            0f, 0f,
+                            1f, 0f,
+                            1f, 1f,
+                            0f, 1f
+                        )
                     )
-                )
 
-                ctx.useBatcher {
-                    it.drawQuad(
+                    batcher.drawQuad(
                         textureCoords,
                         ((x + xOffset) * tileSize).toFloat(),
                         ((y + yOffset) * tileSize).toFloat(),
@@ -128,8 +128,8 @@ class WorldRenderer(
     var screenSize = Size(100, 100)
 
     override fun renderInternal(ctx: RenderContext) {
-        val chunkStartX = (currentOffset.x.toInt() shr 4) - 1
-        val chunkStartY = (currentOffset.y.toInt() shr 4) - 1
+        val chunkStartX = (currentOffset.x.toInt() shr 4) - 2
+        val chunkStartY = (currentOffset.y.toInt() shr 4) - 2
         val chunksCountX = (screenSize.width / tileDisplaySize / 16).toInt() + 4
         val chunksCountY = (screenSize.height / tileDisplaySize / 16).toInt() + 4
 
@@ -185,6 +185,7 @@ class GameScene : Scene() {
     // Game world components
     private lateinit var world: World
     private lateinit var worldRenderer: WorldRenderer
+    private lateinit var entitiesPicker: EntitiesPicker
 
     override suspend fun SContainer.sceneMain() {
         world = World(NormalWorldGenerator())
@@ -195,12 +196,13 @@ class GameScene : Scene() {
             coal = KR.tiles.atlas.coal.read()
         )
         worldRenderer = WorldRenderer(world, textures)
-
         addChild(worldRenderer)
-
         onStageResized { width, height ->
             worldRenderer.screenSize = Size(width, height)
         }
+
+        entitiesPicker = EntitiesPicker()
+        addChild(entitiesPicker)
 
         // Camera controls
         setupCameraControls()
