@@ -235,6 +235,15 @@ class WorldRenderer(
         }
     }
 
+    override fun getLocalBoundsInternal(): Rectangle {
+        return Rectangle(
+            0.0,
+            0.0,
+            screenSize.width,
+            screenSize.height,
+        )
+    }
+
     fun getTileAt(point: Point): Tile {
         val x = point.x.toIntFloor()
         val y = point.y.toIntFloor()
@@ -270,6 +279,54 @@ class WorldRenderer(
     }
 }
 
+class EntitiesPicker(private val textures: TexturesStore) : View() {
+    var selectedEntity: EntityType? = null
+    private val buttonSize = 48.0
+    private val padding = 8.0f
+
+    override fun renderInternal(ctx: RenderContext) {
+        // Draw palette background
+        ctx.useBatcher { batch ->
+            batch.drawQuad(
+                tex = ctx.getTex(Bitmaps.white),
+                x = padding,
+                y = padding,
+                width = buttonSize.toFloat(),
+                height = buttonSize.toFloat(),
+                colorMul = if (selectedEntity == EntityType.Miner) Colors["#CCCCCC"] else Colors["#888888"],
+            )
+        }
+
+        val minerIcon = ctx.getTex(textures.miner)
+
+        val minerIconTextureCoords = TextureCoords(
+            minerIcon,
+            RectCoords(
+                0f, 0f,
+                1 / 7f, 0f,
+                1 / 7f, 1f,
+                0f, 1f
+            )
+        )
+        
+        // Draw miner icon
+        ctx.useBatcher { batch ->
+            batch.drawQuad(
+                tex = minerIconTextureCoords,
+                x = padding + 4,
+                y = padding + 4,
+                width = (buttonSize - 8).toFloat(),
+                height = (buttonSize - 8).toFloat(),
+                filtering = false,
+            )
+        }
+    }
+
+    override fun getLocalBoundsInternal(): Rectangle {
+        return Rectangle(0f, 0f, buttonSize + padding * 2, buttonSize + padding * 2)
+    }
+}
+
 class GameScene : Scene() {
     private lateinit var world: World
     private lateinit var worldRenderer: WorldRenderer
@@ -290,7 +347,7 @@ class GameScene : Scene() {
             worldRenderer.screenSize = Size(width, height)
         }
 
-        entitiesPicker = EntitiesPicker()
+        entitiesPicker = EntitiesPicker(textures)
         addChild(entitiesPicker)
 
         addFixedUpdater((1 / 20f).seconds) {
@@ -302,8 +359,10 @@ class GameScene : Scene() {
 
         // Tile information on hover
         setupTileHoverInfo()
+        
+        // Setup entity placement
+        setupEntityPlacement()
     }
-
 
     private fun SContainer.setupCameraControls() {
         // Mouse events for camera controls
@@ -369,10 +428,42 @@ class GameScene : Scene() {
             }
         }
     }
-}
 
-class EntitiesPicker : View() {
-    override fun renderInternal(ctx: RenderContext) {
-
+    private fun SContainer.setupEntityPlacement() {
+        // Click on the palette to select entity type
+        entitiesPicker.mouse {
+            onClick { 
+                entitiesPicker.selectedEntity = EntityType.Miner
+            }
+        }
+        
+        // Place entity on the world when clicked
+        worldRenderer.mouse {
+            onClick {
+                if (entitiesPicker.selectedEntity != null) {
+                    val worldPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
+                    val x = worldPos.x.toIntFloor()
+                    val y = worldPos.y.toIntFloor()
+                    
+                    val chunkX = x shr 4
+                    val chunkY = y shr 4
+                    val localX = x and 0xF
+                    val localY = y and 0xF
+                    
+                    val chunk = world.getChunk(chunkX, chunkY)
+                    
+                    // Check if tile is valid for placement (not water)
+                    val tile = chunk.tiles[localX][localY]
+                    if (tile.type == TileType.COAL_ORE && chunk.entities[localX][localY] == null) {
+                        when (entitiesPicker.selectedEntity) {
+                            EntityType.Miner -> {
+                                chunk.entities[localX][localY] = Entity.Miner(Point(x, y), 0)
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+            }
+        }
     }
 }
