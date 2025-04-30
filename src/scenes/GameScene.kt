@@ -1,12 +1,16 @@
 package scenes
 
 import KR
+import korlibs.graphics.*
+import korlibs.graphics.shader.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
 import korlibs.image.format.*
 import korlibs.io.file.std.*
 import korlibs.korge.input.*
+import korlibs.korge.internal.*
 import korlibs.korge.render.*
+import korlibs.korge.render.SDFShaders.g
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.math.*
@@ -68,6 +72,7 @@ class Chunk(
         1f, 1f,
         0f, 1f
     )
+
     fun render(ctx: RenderContext, tileSize: Double, xOffset: Double, yOffset: Double, textures: TexturesStore) {
         val minerTexture = ctx.getTex(textures.miner)
 
@@ -104,7 +109,7 @@ class Chunk(
                         val minerTextureCoords = TextureCoords(
                             minerTexture,
                             RectCoords(
-                                 entity.animationFrame / 7f, 0f,
+                                entity.animationFrame / 7f, 0f,
                                 (entity.animationFrame + 1) / 7f, 0f,
                                 (entity.animationFrame + 1) / 7f, 1f,
                                 entity.animationFrame / 7f, 1f
@@ -167,17 +172,18 @@ class World(
 class WorldRenderer(
     val world: World,
     val textures: TexturesStore,
-): View() {
+) : View() {
     var tileDisplaySize: Double = 32.0
     var currentOffset: Point = Point(0, 0)
-    
+
     var minZoom: Double = 8.0
     var maxZoom: Double = 64.0
 
     var screenSize = Size(100, 100)
-    
+
     var hoveredTilePosition: Point? = null
 
+    @OptIn(KorgeInternal::class)
     override fun renderInternal(ctx: RenderContext) {
         val chunkStartX = (currentOffset.x.toInt() shr 4) - 2
         val chunkStartY = (currentOffset.y.toInt() shr 4) - 2
@@ -195,26 +201,36 @@ class WorldRenderer(
                 )
             }
         }
-        
+
         hoveredTilePosition?.let { pos ->
             val screenX = ((pos.x - currentOffset.x) * tileDisplaySize).toFloat()
             val screenY = ((pos.y - currentOffset.y) * tileDisplaySize).toFloat()
-            
+
             val hasEntity = getEntityAt(pos) != null
-            
-            ctx.useLineBatcher { lb ->
-                val highlightColor = if (hasEntity) Colors.YELLOW else Colors["#00FF00"]
-                val lineWidth = if (hasEntity) 3.0 else 2.0
-                
-                lb.drawVector {
-                    width = lineWidth
-                    colorMul = highlightColor
-                    moveTo(screenX, screenY)
-                    lineTo(screenX + tileDisplaySize.toFloat(), screenY)
-                    lineTo(screenX + tileDisplaySize.toFloat(), screenY + tileDisplaySize.toFloat())
-                    lineTo(screenX, screenY + tileDisplaySize.toFloat())
-                    close()
+
+            val highlightColor = if (hasEntity) Colors.YELLOW else Colors["#00FF00"]
+            val lineWidth = if (hasEntity) 0.04f else 0.03f
+
+            val program = BatchBuilder2D.PROGRAM
+                .replacingFragment("color") {
+                    DefaultShaders {
+                        IF (v_Tex.x.ge((1f - lineWidth).lit).or(v_Tex.x.le(lineWidth.lit)).or(v_Tex.y.ge((1f - lineWidth).lit)).or(v_Tex.y.le(lineWidth.lit))) {
+                            SET(out, vec4(highlightColor.rf.lit, highlightColor.gf.lit, highlightColor.bf.lit, 1f.lit))
+                        }.ELSE {
+                            SET(out, vec4(0f.lit))
+                        }
+                    }
                 }
+
+            ctx.useBatcher { batch ->
+                batch.drawQuad(
+                    tex = ctx.getTex(Bitmaps.white),
+                    x = screenX,
+                    y = screenY,
+                    width = tileDisplaySize.toFloat(),
+                    height = tileDisplaySize.toFloat(),
+                    program = program,
+                )
             }
         }
     }
@@ -229,7 +245,6 @@ class WorldRenderer(
         val chunk = world.getChunk(chunkX, chunkY)
         val tileX = x and 0xF
         val tileY = y and 0xF
-        println("Tile at $x, $y: chunk $chunkX, $chunkY, tile $tileX, $tileY")
 
         return chunk.tiles[tileX][tileY]
     }
@@ -287,8 +302,6 @@ class GameScene : Scene() {
 
         // Tile information on hover
         setupTileHoverInfo()
-
-        println("asdfasdf")
     }
 
 
@@ -300,20 +313,18 @@ class GameScene : Scene() {
                     worldRenderer.currentOffset.x + it.deltaDx / worldRenderer.tileDisplaySize,
                     worldRenderer.currentOffset.y + it.deltaDy / worldRenderer.tileDisplaySize,
                 )
-
-                println("drag")
             }
 
             onScroll {
                 val zoomFactor = if (it.scrollDeltaYPixels < 0) 1.1 else 0.9
-                
+
                 val mouseWorldPosBefore = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
-                
+
                 val newZoom = worldRenderer.tileDisplaySize * zoomFactor
                 worldRenderer.tileDisplaySize = newZoom.coerceIn(worldRenderer.minZoom, worldRenderer.maxZoom)
-                
+
                 val mouseWorldPosAfter = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
-                
+
                 worldRenderer.currentOffset -= Point(
                     mouseWorldPosAfter.x - mouseWorldPosBefore.x,
                     mouseWorldPosAfter.y - mouseWorldPosBefore.y,
@@ -334,12 +345,12 @@ class GameScene : Scene() {
                 val worldScreenPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
                 val tile = worldRenderer.getTileAt(worldScreenPos)
                 val entity = worldRenderer.getEntityAt(worldScreenPos)
-                
+
                 worldRenderer.hoveredTilePosition = Point(
                     worldScreenPos.x.toIntFloor(),
                     worldScreenPos.y.toIntFloor()
                 )
-                
+
                 val entityInfo = entity?.let {
                     when (entity) {
                         is Entity.Miner -> "Miner"
@@ -347,10 +358,11 @@ class GameScene : Scene() {
                         is Entity.Storage -> "Storage"
                     }
                 } ?: "None"
-                
-                tileInfoText.text = "Tile: ${tile.type} (${worldScreenPos.x.toInt()}, ${worldScreenPos.y.toInt()}) | Entity: $entityInfo"
+
+                tileInfoText.text =
+                    "Tile: ${tile.type} (${worldScreenPos.x.toInt()}, ${worldScreenPos.y.toInt()}) | Entity: $entityInfo"
             }
-            
+
             // Clear highlight when mouse leaves game area
             onExit {
                 worldRenderer.hoveredTilePosition = null
@@ -359,7 +371,7 @@ class GameScene : Scene() {
     }
 }
 
-class EntitiesPicker: View() {
+class EntitiesPicker : View() {
     override fun renderInternal(ctx: RenderContext) {
 
     }
