@@ -174,6 +174,8 @@ class WorldRenderer(
     var maxZoom: Double = 64.0
 
     var screenSize = Size(100, 100)
+    
+    var hoveredTilePosition: Point? = null
 
     override fun renderInternal(ctx: RenderContext) {
         val chunkStartX = (currentOffset.x.toInt() shr 4) - 2
@@ -190,6 +192,28 @@ class WorldRenderer(
                     y * 16 - currentOffset.y,
                     textures
                 )
+            }
+        }
+        
+        hoveredTilePosition?.let { pos ->
+            val screenX = ((pos.x - currentOffset.x) * tileDisplaySize).toFloat()
+            val screenY = ((pos.y - currentOffset.y) * tileDisplaySize).toFloat()
+            
+            val hasEntity = getEntityAt(pos) != null
+            
+            ctx.useLineBatcher { lb ->
+                val highlightColor = if (hasEntity) Colors.YELLOW else Colors["#00FF00"]
+                val lineWidth = if (hasEntity) 3.0 else 2.0
+                
+                lb.drawVector {
+                    width = lineWidth
+                    colorMul = highlightColor
+                    moveTo(screenX, screenY)
+                    lineTo(screenX + tileDisplaySize.toFloat(), screenY)
+                    lineTo(screenX + tileDisplaySize.toFloat(), screenY + tileDisplaySize.toFloat())
+                    lineTo(screenX, screenY + tileDisplaySize.toFloat())
+                    close()
+                }
             }
         }
     }
@@ -230,7 +254,6 @@ class WorldRenderer(
 }
 
 class GameScene : Scene() {
-    // Game world components
     private lateinit var world: World
     private lateinit var worldRenderer: WorldRenderer
     private lateinit var entitiesPicker: EntitiesPicker
@@ -308,8 +331,27 @@ class GameScene : Scene() {
             onMove {
                 val worldScreenPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
                 val tile = worldRenderer.getTileAt(worldScreenPos)
-
-                tileInfoText.text = "Tile: ${tile.type} (${worldScreenPos.x}, ${worldScreenPos.y})"
+                val entity = worldRenderer.getEntityAt(worldScreenPos)
+                
+                worldRenderer.hoveredTilePosition = Point(
+                    worldScreenPos.x.toInt().toDouble(),
+                    worldScreenPos.y.toInt().toDouble()
+                )
+                
+                val entityInfo = entity?.let {
+                    when (entity) {
+                        is Entity.Miner -> "Miner"
+                        is Entity.ConveyorBelt -> "Conveyor Belt"
+                        is Entity.Storage -> "Storage"
+                    }
+                } ?: "None"
+                
+                tileInfoText.text = "Tile: ${tile.type} (${worldScreenPos.x.toInt()}, ${worldScreenPos.y.toInt()}) | Entity: $entityInfo"
+            }
+            
+            // Clear highlight when mouse leaves game area
+            onExit {
+                worldRenderer.hoveredTilePosition = null
             }
         }
     }
