@@ -169,6 +169,9 @@ class WorldRenderer(
 ): View() {
     var tileDisplaySize: Double = 32.0
     var currentOffset: Point = Point(0, 0)
+    
+    var minZoom: Double = 8.0
+    var maxZoom: Double = 64.0
 
     var screenSize = Size(100, 100)
 
@@ -278,7 +281,8 @@ class GameScene : Scene() {
 
             onScroll {
                 val zoomFactor = if (it.scrollDeltaYPixels < 0) 1.1 else 0.9
-                worldRenderer.tileDisplaySize *= zoomFactor
+                val newZoom = worldRenderer.tileDisplaySize * zoomFactor
+                worldRenderer.tileDisplaySize = newZoom.coerceIn(worldRenderer.minZoom, worldRenderer.maxZoom)
             }
         }
     }
