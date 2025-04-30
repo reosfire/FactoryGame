@@ -9,6 +9,7 @@ import korlibs.korge.input.*
 import korlibs.korge.render.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
+import korlibs.math.*
 import korlibs.math.geom.*
 import korlibs.math.geom.slice.*
 import korlibs.time.*
@@ -219,8 +220,8 @@ class WorldRenderer(
     }
 
     fun getTileAt(point: Point): Tile {
-        val x = point.x.toInt()
-        val y = point.y.toInt()
+        val x = point.x.toIntFloor()
+        val y = point.y.toIntFloor()
 
         val chunkX = x shr 4
         val chunkY = y shr 4
@@ -228,13 +229,14 @@ class WorldRenderer(
         val chunk = world.getChunk(chunkX, chunkY)
         val tileX = x and 0xF
         val tileY = y and 0xF
+        println("Tile at $x, $y: chunk $chunkX, $chunkY, tile $tileX, $tileY")
 
         return chunk.tiles[tileX][tileY]
     }
 
     fun getEntityAt(point: Point): Entity? {
-        val x = point.x.toInt()
-        val y = point.y.toInt()
+        val x = point.x.toIntFloor()
+        val y = point.y.toIntFloor()
 
         val chunkX = x shr 4
         val chunkY = y shr 4
@@ -334,8 +336,8 @@ class GameScene : Scene() {
                 val entity = worldRenderer.getEntityAt(worldScreenPos)
                 
                 worldRenderer.hoveredTilePosition = Point(
-                    worldScreenPos.x.toInt().toDouble(),
-                    worldScreenPos.y.toInt().toDouble()
+                    worldScreenPos.x.toIntFloor(),
+                    worldScreenPos.y.toIntFloor()
                 )
                 
                 val entityInfo = entity?.let {
