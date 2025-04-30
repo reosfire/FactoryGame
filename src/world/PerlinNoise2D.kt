@@ -3,14 +3,12 @@ package world
 import kotlin.math.*
 import kotlin.random.*
 
-class PerlinNoise2D(seed: Long) {
+class PerlinNoise2D(random: Random) {
 
     // Permutation table, doubled to avoid index wrapping issues
     private val p: IntArray = IntArray(512)
 
     init {
-        // Use Kotlin's Random initialized with the seed
-        val random = Random(seed)
         val originalP = IntArray(256) { it } // Array [0, 1, 2, ..., 255]
 
         // Shuffle the array using the provided seed

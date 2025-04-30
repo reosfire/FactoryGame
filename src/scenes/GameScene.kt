@@ -3,12 +3,15 @@ package scenes
 import KR
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
+import korlibs.image.format.*
+import korlibs.io.file.std.*
 import korlibs.korge.input.*
 import korlibs.korge.render.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
 import korlibs.math.geom.slice.*
+import korlibs.time.*
 import world.*
 import kotlin.math.*
 import kotlin.random.*
@@ -42,7 +45,7 @@ enum class EntityType {
 }
 
 sealed class Entity {
-    data class Miner(val position: Point) : Entity()
+    data class Miner(val position: Point, var animationFrame: Int) : Entity()
     data class ConveyorBelt(val position: Point) : Entity()
     data class Storage(val position: Point) : Entity()
 }
@@ -50,14 +53,23 @@ sealed class Entity {
 class TexturesStore(
     val grass: Bitmap,
     val water: Bitmap,
-    val coal: Bitmap
+    val coal: Bitmap,
+    val miner: Bitmap,
 )
 
 class Chunk(
     val tiles: Array<Array<Tile>>,
     val entities: Array<Array<Entity?>>
 ) {
+    private val rectCoords = RectCoords(
+        0f, 0f,
+        1f, 0f,
+        1f, 1f,
+        0f, 1f
+    )
     fun render(ctx: RenderContext, tileSize: Double, xOffset: Double, yOffset: Double, textures: TexturesStore) {
+        val minerTexture = ctx.getTex(textures.miner)
+
         ctx.useBatcher { batcher ->
             for (x in 0..<16) {
                 for (y in 0..<16) {
@@ -72,12 +84,7 @@ class Chunk(
 
                     val textureCoords = TextureCoords(
                         tex,
-                        RectCoords(
-                            0f, 0f,
-                            1f, 0f,
-                            1f, 1f,
-                            0f, 1f
-                        )
+                        rectCoords
                     )
 
                     batcher.drawQuad(
@@ -89,6 +96,30 @@ class Chunk(
                         blendMode = BlendMode.NONE,
                         filtering = false
                     )
+
+                    // Render entities
+                    val entity = entities[x][y] ?: continue
+                    if (entity is Entity.Miner) {
+                        val minerTextureCoords = TextureCoords(
+                            minerTexture,
+                            RectCoords(
+                                 entity.animationFrame / 7f, 0f,
+                                (entity.animationFrame + 1) / 7f, 0f,
+                                (entity.animationFrame + 1) / 7f, 1f,
+                                entity.animationFrame / 7f, 1f
+                            )
+                        )
+
+                        batcher.drawQuad(
+                            minerTextureCoords,
+                            ((x + xOffset) * tileSize).toFloat(),
+                            ((y + yOffset) * tileSize).toFloat(),
+                            tileSize.toFloat(),
+                            tileSize.toFloat(),
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
                 }
             }
         }
@@ -115,6 +146,20 @@ class World(
 
     fun getChunk(x: Int, y: Int): Chunk {
         return loadedChunks.getOrPut(Pair(x, y)) { generator.generateChunk(x, y) }
+    }
+
+    fun tick() {
+        for (chunk in loadedChunks.values) {
+            for (x in 0..<16) {
+                for (y in 0..<16) {
+                    val entity = chunk.entities[x][y]
+                    if (entity is Entity.Miner) {
+                        // Update miner animation frame
+                        entity.animationFrame = (entity.animationFrame + 1) % 7
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -193,7 +238,8 @@ class GameScene : Scene() {
         val textures = TexturesStore(
             grass = KR.tiles.atlas.grass.read(),
             water = KR.tiles.atlas.water.read(),
-            coal = KR.tiles.atlas.coal.read()
+            coal = KR.tiles.atlas.coal.read(),
+            miner = KR.extractor.read(),
         )
         worldRenderer = WorldRenderer(world, textures)
         addChild(worldRenderer)
@@ -204,11 +250,17 @@ class GameScene : Scene() {
         entitiesPicker = EntitiesPicker()
         addChild(entitiesPicker)
 
+        addFixedUpdater((1 / 20f).seconds) {
+            world.tick()
+        }
+
         // Camera controls
         setupCameraControls()
 
         // Tile information on hover
         setupTileHoverInfo()
+
+        println("asdfasdf")
     }
 
 
@@ -220,6 +272,8 @@ class GameScene : Scene() {
                     worldRenderer.currentOffset.x + it.deltaDx / worldRenderer.tileDisplaySize,
                     worldRenderer.currentOffset.y + it.deltaDy / worldRenderer.tileDisplaySize,
                 )
+
+                println("drag")
             }
 
             onScroll {
