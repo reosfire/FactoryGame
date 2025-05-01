@@ -1,6 +1,7 @@
 package scenes
 
 import KR
+import debug.*
 import korlibs.graphics.*
 import korlibs.graphics.shader.*
 import korlibs.image.bitmap.*
@@ -334,7 +335,8 @@ class GameScene : Scene() {
     private lateinit var worldRenderer: WorldRenderer
     private lateinit var entitiesPicker: EntitiesPicker
     
-    // Add debug mode flag
+    // Add debug overlay component
+    private lateinit var debugOverlay: DebugOverlay
     private var debugMode = false
 
     override suspend fun SContainer.sceneMain() {
@@ -354,6 +356,10 @@ class GameScene : Scene() {
 
         entitiesPicker = EntitiesPicker(textures)
         addChild(entitiesPicker)
+        
+        // Initialize debug overlay
+        debugOverlay = DebugOverlay()
+        addChild(debugOverlay)
 
         addFixedUpdater((1 / 20f).seconds) {
             world.tick()
@@ -376,6 +382,7 @@ class GameScene : Scene() {
         keys {
             down(Key.F3) {
                 debugMode = !debugMode
+                debugOverlay.toggleVisibility()
             }
         }
     }
@@ -404,18 +411,14 @@ class GameScene : Scene() {
                     mouseWorldPosAfter.x - mouseWorldPosBefore.x,
                     mouseWorldPosAfter.y - mouseWorldPosBefore.y,
                 )
+
+                debugOverlay.zoomLevel = worldRenderer.tileDisplaySize
+                debugOverlay.update()
             }
         }
     }
 
     private fun SContainer.setupTileHoverInfo() {
-        // Create a text to display tile info
-        val tileInfoText = text("", 16.0).apply {
-            position(10, 10)
-            visible = false // Hide by default, will only show in debug mode
-        }
-
-        // Update tile info on mouse move
         mouse {
             onMove {
                 val worldScreenPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
@@ -426,37 +429,36 @@ class GameScene : Scene() {
                     worldScreenPos.x.toIntFloor(),
                     worldScreenPos.y.toIntFloor()
                 )
-                
-                // Update debug info if enabled
-                if (debugMode) {
-                    val entityInfo = entity?.let {
-                        when (entity) {
-                            is Entity.Miner -> "Miner"
-                            is Entity.ConveyorBelt -> "Conveyor Belt"
-                            is Entity.Storage -> "Storage"
-                        }
-                    } ?: "None"
-                    
-                    // Add more detailed debug info
-                    val worldX = worldScreenPos.x.toIntFloor()
-                    val worldY = worldScreenPos.y.toIntFloor()
-                    val chunkX = worldX shr 4
-                    val chunkY = worldY shr 4
-                    val localX = worldX and 0xF
-                    val localY = worldY and 0xF
-                    
-                    tileInfoText.text =
-                        "Tile: ${tile.type} (${worldX}, ${worldY}) | Entity: $entityInfo\n" +
-                        "Chunk: ($chunkX, $chunkY) | Local: ($localX, $localY)\n" +
-                        "Zoom: ${worldRenderer.tileDisplaySize.format(2)}"
-                    
-                    tileInfoText.visible = true
-                } else {
-                    tileInfoText.visible = false
+
+                val worldX = worldScreenPos.x.toIntFloor()
+                val worldY = worldScreenPos.y.toIntFloor()
+                val chunkX = worldX shr 4
+                val chunkY = worldY shr 4
+                val localX = worldX and 0xF
+                val localY = worldY and 0xF
+
+                val entityTypeStr = entity?.let {
+                    when (entity) {
+                        is Entity.Miner -> "Miner"
+                        is Entity.ConveyorBelt -> "Conveyor Belt"
+                        is Entity.Storage -> "Storage"
+                    }
                 }
+                
+                // Update debug overlay fields
+                debugOverlay.tileType = tile.type
+                debugOverlay.worldX = worldX
+                debugOverlay.worldY = worldY
+                debugOverlay.entityType = entityTypeStr
+                debugOverlay.chunkX = chunkX
+                debugOverlay.chunkY = chunkY
+                debugOverlay.localX = localX
+                debugOverlay.localY = localY
+                debugOverlay.zoomLevel = worldRenderer.tileDisplaySize
+
+                debugOverlay.update()
             }
-            
-            // Clear highlight when mouse leaves game area
+
             onExit {
                 worldRenderer.hoveredTilePosition = null
             }
@@ -499,17 +501,5 @@ class GameScene : Scene() {
                 }
             }
         }
-    }
-}
-
-// kotlin multiplatform extension function to format double values
-private fun Double.format(decimalPlaces: Int): String {
-    val toString = toString()
-    val dotIndex = toString.indexOf('.')
-    return if (dotIndex != -1) {
-        val endIndex = minOf(dotIndex + decimalPlaces + 1, toString.length)
-        toString.substring(0, endIndex)
-    } else {
-        toString
     }
 }
