@@ -1,7 +1,7 @@
 package debug
 
 import korlibs.korge.view.*
-import scenes.*
+import world.*
 
 class DebugOverlay : Container() {
     var tileType: TileType? = null

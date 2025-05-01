@@ -1,6 +1,6 @@
+import korlibs.image.color.*
 import korlibs.korge.*
 import korlibs.korge.scene.*
-import korlibs.image.color.*
 import korlibs.math.geom.*
 import scenes.*
 

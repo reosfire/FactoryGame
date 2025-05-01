@@ -4,6 +4,19 @@ import korlibs.math.geom.*
 import scenes.*
 import kotlin.random.*
 
+interface WorldGenerator {
+    fun generateChunk(x: Int, y: Int): Chunk
+}
+
+class RandomWorldGenerator : WorldGenerator {
+    override fun generateChunk(x: Int, y: Int): Chunk {
+        val tiles = Array(16) { Array(16) { Tile.random() } }
+        val entities = Array(16) { Array<Entity?>(16) { null } }
+
+        return Chunk(tiles, entities)
+    }
+}
+
 class NormalWorldGenerator : WorldGenerator {
     val random = Random(12345)
     private val perlinNoise = PerlinNoise2D(random)

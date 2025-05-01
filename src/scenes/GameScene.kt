@@ -2,16 +2,14 @@ package scenes
 
 import KR
 import debug.*
+import korlibs.event.*
 import korlibs.graphics.*
 import korlibs.graphics.shader.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
-import korlibs.image.format.*
-import korlibs.io.file.std.*
 import korlibs.korge.input.*
 import korlibs.korge.internal.*
 import korlibs.korge.render.*
-import korlibs.korge.render.SDFShaders.g
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.math.*
@@ -19,44 +17,6 @@ import korlibs.math.geom.*
 import korlibs.math.geom.slice.*
 import korlibs.time.*
 import world.*
-import kotlin.math.*
-import kotlin.random.*
-import korlibs.event.Key
-import korlibs.util.*
-
-enum class TileType {
-    GRASS,
-    WATER,
-    COAL_ORE
-}
-
-sealed class Tile(val type: TileType) {
-    data object Grass : Tile(TileType.GRASS)
-    data object Water : Tile(TileType.WATER)
-    data object CoalOre : Tile(TileType.COAL_ORE)
-
-    companion object {
-        fun random(): Tile {
-            return when ((0..2).random()) {
-                0 -> Grass
-                1 -> Water
-                else -> CoalOre
-            }
-        }
-    }
-}
-
-enum class EntityType {
-    Miner,
-    ConveyorBelt,
-    Storage
-}
-
-sealed class Entity {
-    data class Miner(val position: Point, var animationFrame: Int) : Entity()
-    data class ConveyorBelt(val position: Point) : Entity()
-    data class Storage(val position: Point) : Entity()
-}
 
 class TexturesStore(
     val grass: Bitmap,
@@ -132,19 +92,6 @@ class Chunk(
                 }
             }
         }
-    }
-}
-
-interface WorldGenerator {
-    fun generateChunk(x: Int, y: Int): Chunk
-}
-
-class RandomWorldGenerator : WorldGenerator {
-    override fun generateChunk(x: Int, y: Int): Chunk {
-        val tiles = Array(16) { Array(16) { Tile.random() } }
-        val entities = Array(16) { Array<Entity?>(16) { null } }
-
-        return Chunk(tiles, entities)
     }
 }
 
@@ -282,54 +229,6 @@ class WorldRenderer(
     }
 }
 
-class EntitiesPicker(private val textures: TexturesStore) : View() {
-    var selectedEntity: EntityType? = null
-    private val buttonSize = 48.0
-    private val padding = 8.0f
-
-    override fun renderInternal(ctx: RenderContext) {
-        // Draw palette background
-        ctx.useBatcher { batch ->
-            batch.drawQuad(
-                tex = ctx.getTex(Bitmaps.white),
-                x = padding,
-                y = padding,
-                width = buttonSize.toFloat(),
-                height = buttonSize.toFloat(),
-                colorMul = if (selectedEntity == EntityType.Miner) Colors["#CCCCCC"] else Colors["#888888"],
-            )
-        }
-
-        val minerIcon = ctx.getTex(textures.miner)
-
-        val minerIconTextureCoords = TextureCoords(
-            minerIcon,
-            RectCoords(
-                0f, 0f,
-                1 / 7f, 0f,
-                1 / 7f, 1f,
-                0f, 1f
-            )
-        )
-        
-        // Draw miner icon
-        ctx.useBatcher { batch ->
-            batch.drawQuad(
-                tex = minerIconTextureCoords,
-                x = padding + 4,
-                y = padding + 4,
-                width = (buttonSize - 8).toFloat(),
-                height = (buttonSize - 8).toFloat(),
-                filtering = false,
-            )
-        }
-    }
-
-    override fun getLocalBoundsInternal(): Rectangle {
-        return Rectangle(0f, 0f, buttonSize + padding * 2, buttonSize + padding * 2)
-    }
-}
-
 class GameScene : Scene() {
     private lateinit var world: World
     private lateinit var worldRenderer: WorldRenderer
@@ -356,8 +255,7 @@ class GameScene : Scene() {
 
         entitiesPicker = EntitiesPicker(textures)
         addChild(entitiesPicker)
-        
-        // Initialize debug overlay
+
         debugOverlay = DebugOverlay()
         addChild(debugOverlay)
 
@@ -365,16 +263,9 @@ class GameScene : Scene() {
             world.tick()
         }
 
-        // Camera controls
         setupCameraControls()
-
-        // Tile information on hover
         setupTileHoverInfo()
-        
-        // Setup entity placement
         setupEntityPlacement()
-        
-        // Setup debug mode toggle with F3
         setupDebugMode()
     }
     
