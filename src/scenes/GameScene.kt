@@ -5,6 +5,7 @@ import debug.*
 import korlibs.event.*
 import korlibs.graphics.*
 import korlibs.graphics.shader.*
+import korlibs.graphics.shader.gl.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
 import korlibs.korge.input.*
@@ -133,7 +134,30 @@ class WorldRenderer(
 
     var hoveredTilePosition: Point? = null
 
+    private object SelectorUniformBlock : UniformBlock(fixedLocation = 6) {
+        val frame by float()
+        val color by vec4()
+        val width by float()
+    }
+
+    private var currentFrame = 0f
+
     @OptIn(KorgeInternal::class)
+    private val program = BatchBuilder2D.PROGRAM
+        .replacingFragment("color") {
+            DefaultShaders {
+                IF (v_Tex.x.ge(1f - SelectorUniformBlock.width)
+                    .or(v_Tex.x.le(SelectorUniformBlock.width))
+                    .or(v_Tex.y.ge(1f - SelectorUniformBlock.width))
+                    .or(v_Tex.y.le(SelectorUniformBlock.width))
+                ) {
+                    SET(out, SelectorUniformBlock.color)
+                }.ELSE {
+                    SET(out, vec4(0f.lit))
+                }
+            }
+        }
+
     override fun renderInternal(ctx: RenderContext) {
         val chunkStartX = (currentOffset.x.toInt() shr 4) - 2
         val chunkStartY = (currentOffset.y.toInt() shr 4) - 2
@@ -161,16 +185,11 @@ class WorldRenderer(
             val highlightColor = if (hasEntity) Colors.YELLOW else Colors["#00FF00"]
             val lineWidth = if (hasEntity) 0.04f else 0.03f
 
-            val program = BatchBuilder2D.PROGRAM
-                .replacingFragment("color") {
-                    DefaultShaders {
-                        IF (v_Tex.x.ge((1f - lineWidth).lit).or(v_Tex.x.le(lineWidth.lit)).or(v_Tex.y.ge((1f - lineWidth).lit)).or(v_Tex.y.le(lineWidth.lit))) {
-                            SET(out, vec4(highlightColor.rf.lit, highlightColor.gf.lit, highlightColor.bf.lit, 1f.lit))
-                        }.ELSE {
-                            SET(out, vec4(0f.lit))
-                        }
-                    }
-                }
+            ctx[SelectorUniformBlock].push {
+                it[frame] = currentFrame++
+                it[color] = highlightColor
+                it[width] = lineWidth
+            }
 
             ctx.useBatcher { batch ->
                 batch.drawQuad(
