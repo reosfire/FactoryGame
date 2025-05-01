@@ -15,9 +15,11 @@ import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.math.*
 import korlibs.math.geom.*
+import korlibs.math.geom.sin
 import korlibs.math.geom.slice.*
 import korlibs.time.*
 import world.*
+import kotlin.math.*
 
 class TexturesStore(
     val grass: Bitmap,
@@ -143,17 +145,21 @@ class WorldRenderer(
     private var currentFrame = 0f
 
     @OptIn(KorgeInternal::class)
-    private val program = BatchBuilder2D.PROGRAM
-        .replacingFragment("color") {
+    private val program =
+        BatchBuilder2D.PROGRAM.replacingFragment("color") {
             DefaultShaders {
-                IF (v_Tex.x.ge(1f - SelectorUniformBlock.width)
+                IF (
+                    v_Tex.x.ge(1f - SelectorUniformBlock.width)
                     .or(v_Tex.x.le(SelectorUniformBlock.width))
                     .or(v_Tex.y.ge(1f - SelectorUniformBlock.width))
                     .or(v_Tex.y.le(SelectorUniformBlock.width))
                 ) {
-                    SET(out, SelectorUniformBlock.color)
+                    val resultColor = TEMP(VarType.Float4)
+                    SET(resultColor, mix(SelectorUniformBlock.color, vec4(0f.lit), (sin(SelectorUniformBlock.frame * 0.05f.lit) + 1f.lit) / 8f.lit))
+
+                    SET(out, resultColor)
                 }.ELSE {
-                    SET(out, vec4(0f.lit))
+                    SET(out, vec4(0.1f.lit))
                 }
             }
         }
@@ -176,6 +182,10 @@ class WorldRenderer(
             }
         }
 
+        ctx[SelectorUniformBlock].push {
+            it[frame] = currentFrame++
+        }
+
         hoveredTilePosition?.let { pos ->
             val screenX = ((pos.x - currentOffset.x) * tileDisplaySize).toFloat()
             val screenY = ((pos.y - currentOffset.y) * tileDisplaySize).toFloat()
@@ -186,7 +196,6 @@ class WorldRenderer(
             val lineWidth = if (hasEntity) 0.04f else 0.03f
 
             ctx[SelectorUniformBlock].push {
-                it[frame] = currentFrame++
                 it[color] = highlightColor
                 it[width] = lineWidth
             }
@@ -199,6 +208,7 @@ class WorldRenderer(
                     width = tileDisplaySize.toFloat(),
                     height = tileDisplaySize.toFloat(),
                     program = program,
+                    blendMode = BlendMode.NORMAL,
                 )
             }
         }
@@ -252,7 +262,7 @@ class GameScene : Scene() {
     private lateinit var world: World
     private lateinit var worldRenderer: WorldRenderer
     private lateinit var entitiesPicker: EntitiesPicker
-    
+
     // Add debug overlay component
     private lateinit var debugOverlay: DebugOverlay
     private var debugMode = false
@@ -287,7 +297,7 @@ class GameScene : Scene() {
         setupEntityPlacement()
         setupDebugMode()
     }
-    
+
     private fun SContainer.setupDebugMode() {
         keys {
             down(Key.F3) {
@@ -334,7 +344,7 @@ class GameScene : Scene() {
                 val worldScreenPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
                 val tile = worldRenderer.getTileAt(worldScreenPos)
                 val entity = worldRenderer.getEntityAt(worldScreenPos)
-                
+
                 worldRenderer.hoveredTilePosition = Point(
                     worldScreenPos.x.toIntFloor(),
                     worldScreenPos.y.toIntFloor()
@@ -354,7 +364,7 @@ class GameScene : Scene() {
                         is Entity.Storage -> "Storage"
                     }
                 }
-                
+
                 // Update debug overlay fields
                 debugOverlay.tileType = tile.type
                 debugOverlay.worldX = worldX
@@ -378,11 +388,11 @@ class GameScene : Scene() {
     private fun SContainer.setupEntityPlacement() {
         // Click on the palette to select entity type
         entitiesPicker.mouse {
-            onClick { 
+            onClick {
                 entitiesPicker.selectedEntity = EntityType.Miner
             }
         }
-        
+
         // Place entity on the world when clicked
         worldRenderer.mouse {
             onClick {
@@ -390,14 +400,14 @@ class GameScene : Scene() {
                     val worldPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
                     val x = worldPos.x.toIntFloor()
                     val y = worldPos.y.toIntFloor()
-                    
+
                     val chunkX = x shr 4
                     val chunkY = y shr 4
                     val localX = x and 0xF
                     val localY = y and 0xF
-                    
+
                     val chunk = world.getChunk(chunkX, chunkY)
-                    
+
                     // Check if tile is valid for placement (not water)
                     val tile = chunk.tiles[localX][localY]
                     if (tile.type == TileType.COAL_ORE && chunk.entities[localX][localY] == null) {
@@ -405,6 +415,7 @@ class GameScene : Scene() {
                             EntityType.Miner -> {
                                 chunk.entities[localX][localY] = Entity.Miner(Point(x, y), 0)
                             }
+
                             else -> {}
                         }
                     }
