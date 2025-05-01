@@ -108,11 +108,11 @@ class World(
         return loadedChunks.getOrPut(Pair(x, y)) { generator.generateChunk(x, y) }
     }
 
-    fun tick() {
+    fun tick(globalState: GlobalState) {
         for (chunk in loadedChunks.values) {
             for (x in 0..<16) {
                 for (y in 0..<16) {
-                    chunk.entities[x][y]?.tick()
+                    chunk.entities[x][y]?.tick(globalState)
                 }
             }
         }
@@ -285,6 +285,10 @@ class WorldRenderer(
     }
 }
 
+class GlobalState(
+    var money: Long = 100L,
+)
+
 class GameScene : Scene() {
     private lateinit var world: World
     private lateinit var worldRenderer: WorldRenderer
@@ -295,7 +299,7 @@ class GameScene : Scene() {
     private lateinit var debugOverlay: DebugOverlay
     private var debugMode = false
 
-    private var money = 100L
+    private val globalState = GlobalState()
 
     override suspend fun SContainer.sceneMain() {
         world = World(NormalWorldGenerator())
@@ -318,15 +322,16 @@ class GameScene : Scene() {
         debugOverlay = DebugOverlay()
         addChild(debugOverlay)
 
-        addFixedUpdater((1 / 20f).seconds) {
-            world.tick()
-        }
-
-        moneyText = Text("Money: $money", 24.0).apply {
+        moneyText = Text("Money: ${globalState.money}", 24.0).apply {
             position(10, 10)
             color = Colors.WHITE
         }
         addChild(moneyText)
+
+        addFixedUpdater((1 / 20f).seconds) {
+            world.tick(globalState)
+            moneyText.text = "Money: ${globalState.money}"
+        }
 
         setupCameraControls()
         setupTileHoverInfo()
@@ -448,9 +453,8 @@ class GameScene : Scene() {
                     if (tile.type == TileType.COAL_ORE && chunk.entities[localX][localY] == null) {
                         when (entitiesPicker.selectedEntity) {
                             EntityType.Miner -> {
-                                if (money >= 10) {
-                                    money -= 10
-                                    moneyText.text = "Money: $money"
+                                if (globalState.money >= 10) {
+                                    globalState.money -= 10
                                     chunk.entities[localX][localY] = Entity.Miner(Point(x, y), 0)
                                 } else {
                                     println("Not enough money to place a miner!")
