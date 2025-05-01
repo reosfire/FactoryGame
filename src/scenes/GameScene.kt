@@ -20,6 +20,8 @@ import korlibs.time.*
 import world.*
 import kotlin.math.*
 import kotlin.random.*
+import korlibs.event.Key
+import korlibs.util.*
 
 enum class TileType {
     GRASS,
@@ -331,6 +333,9 @@ class GameScene : Scene() {
     private lateinit var world: World
     private lateinit var worldRenderer: WorldRenderer
     private lateinit var entitiesPicker: EntitiesPicker
+    
+    // Add debug mode flag
+    private var debugMode = false
 
     override suspend fun SContainer.sceneMain() {
         world = World(NormalWorldGenerator())
@@ -362,6 +367,17 @@ class GameScene : Scene() {
         
         // Setup entity placement
         setupEntityPlacement()
+        
+        // Setup debug mode toggle with F3
+        setupDebugMode()
+    }
+    
+    private fun SContainer.setupDebugMode() {
+        keys {
+            down(Key.F3) {
+                debugMode = !debugMode
+            }
+        }
     }
 
     private fun SContainer.setupCameraControls() {
@@ -396,6 +412,7 @@ class GameScene : Scene() {
         // Create a text to display tile info
         val tileInfoText = text("", 16.0).apply {
             position(10, 10)
+            visible = false // Hide by default, will only show in debug mode
         }
 
         // Update tile info on mouse move
@@ -404,24 +421,41 @@ class GameScene : Scene() {
                 val worldScreenPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
                 val tile = worldRenderer.getTileAt(worldScreenPos)
                 val entity = worldRenderer.getEntityAt(worldScreenPos)
-
+                
                 worldRenderer.hoveredTilePosition = Point(
                     worldScreenPos.x.toIntFloor(),
                     worldScreenPos.y.toIntFloor()
                 )
-
-                val entityInfo = entity?.let {
-                    when (entity) {
-                        is Entity.Miner -> "Miner"
-                        is Entity.ConveyorBelt -> "Conveyor Belt"
-                        is Entity.Storage -> "Storage"
-                    }
-                } ?: "None"
-
-                tileInfoText.text =
-                    "Tile: ${tile.type} (${worldScreenPos.x.toInt()}, ${worldScreenPos.y.toInt()}) | Entity: $entityInfo"
+                
+                // Update debug info if enabled
+                if (debugMode) {
+                    val entityInfo = entity?.let {
+                        when (entity) {
+                            is Entity.Miner -> "Miner"
+                            is Entity.ConveyorBelt -> "Conveyor Belt"
+                            is Entity.Storage -> "Storage"
+                        }
+                    } ?: "None"
+                    
+                    // Add more detailed debug info
+                    val worldX = worldScreenPos.x.toIntFloor()
+                    val worldY = worldScreenPos.y.toIntFloor()
+                    val chunkX = worldX shr 4
+                    val chunkY = worldY shr 4
+                    val localX = worldX and 0xF
+                    val localY = worldY and 0xF
+                    
+                    tileInfoText.text =
+                        "Tile: ${tile.type} (${worldX}, ${worldY}) | Entity: $entityInfo\n" +
+                        "Chunk: ($chunkX, $chunkY) | Local: ($localX, $localY)\n" +
+                        "Zoom: ${worldRenderer.tileDisplaySize.format(2)}"
+                    
+                    tileInfoText.visible = true
+                } else {
+                    tileInfoText.visible = false
+                }
             }
-
+            
             // Clear highlight when mouse leaves game area
             onExit {
                 worldRenderer.hoveredTilePosition = null
@@ -465,5 +499,17 @@ class GameScene : Scene() {
                 }
             }
         }
+    }
+}
+
+// kotlin multiplatform extension function to format double values
+private fun Double.format(decimalPlaces: Int): String {
+    val toString = toString()
+    val dotIndex = toString.indexOf('.')
+    return if (dotIndex != -1) {
+        val endIndex = minOf(dotIndex + decimalPlaces + 1, toString.length)
+        toString.substring(0, endIndex)
+    } else {
+        toString
     }
 }
