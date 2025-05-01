@@ -41,22 +41,7 @@ class NormalWorldGenerator : WorldGenerator {
 
         val entities = Array(16) { tileY ->
             Array<Entity?>(16) { tileX ->
-                val worldX = (x shl 4) + tileX
-                val worldY = (y shl 4) + tileY
-
-                when (tiles[tileY][tileX]) {
-                    Tile.CoalOre -> {
-                        if (random.nextDouble() < 0.1) {
-                            Entity.Miner(
-                                Point(worldX, worldY),
-                                random.nextInt(0, 6)
-                            )
-                        } else {
-                            null
-                        }
-                    }
-                    else -> null
-                }
+                null
             }
         }
 
