@@ -11,6 +11,7 @@ import korlibs.image.color.*
 import korlibs.korge.input.*
 import korlibs.korge.internal.*
 import korlibs.korge.render.*
+import korlibs.korge.render.SDFShaders.lit
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.math.*
@@ -122,6 +123,18 @@ class World(
     }
 }
 
+fun Program.Builder.TEMP(type: VarType, initialValue: Operand): Temp {
+    val temp = TEMP(type)
+    SET(temp, initialValue)
+    return temp
+}
+
+fun Program.Builder.TEMP(initialValue: Operand): Temp {
+    val temp = TEMP(initialValue.type)
+    SET(temp, initialValue)
+    return temp
+}
+
 class WorldRenderer(
     val world: World,
     val textures: TexturesStore,
@@ -145,24 +158,42 @@ class WorldRenderer(
     private var currentFrame = 0f
 
     @OptIn(KorgeInternal::class)
-    private val program =
-        BatchBuilder2D.PROGRAM.replacingFragment("color") {
-            DefaultShaders {
-                IF (
-                    v_Tex.x.ge(1f - SelectorUniformBlock.width)
-                    .or(v_Tex.x.le(SelectorUniformBlock.width))
-                    .or(v_Tex.y.ge(1f - SelectorUniformBlock.width))
-                    .or(v_Tex.y.le(SelectorUniformBlock.width))
-                ) {
-                    val resultColor = TEMP(VarType.Float4)
-                    SET(resultColor, mix(SelectorUniformBlock.color, vec4(0f.lit), (sin(SelectorUniformBlock.frame * 0.05f.lit) + 1f.lit) / 8f.lit))
+    private val program = BatchBuilder2D.PROGRAM.replacingFragment("color") {
+        DefaultShaders {
+            val shimmerScale = 10f.lit
+            val shimmerSpeed = 0.05f.lit
+            val shimmerIntensity = 0.3f.lit
+            val shimmerBase = 0.7f.lit
 
-                    SET(out, resultColor)
-                }.ELSE {
-                    SET(out, vec4(0.1f.lit))
-                }
+            val borderWidth = SelectorUniformBlock.width
+            val baseColor = SelectorUniformBlock.color
+            val frame = SelectorUniformBlock.frame
+
+            val distToEdgeX = min(abs(borderWidth - v_Tex.x), abs(1f.lit - borderWidth - v_Tex.x))
+            val distToEdgeY = min(abs(borderWidth - v_Tex.y), abs(1f.lit - borderWidth - v_Tex.y))
+            val minDistToEdge = TEMP(min(distToEdgeX, distToEdgeY))
+
+            IF (minDistToEdge.le(borderWidth)) {
+                val shimmerPhase = frame * shimmerSpeed
+
+                val shimmerEffect = sin((v_Tex.x + v_Tex.y) * shimmerScale + shimmerPhase) * shimmerIntensity + shimmerBase
+
+                val alpha = TEMP((1f.lit - smoothstep(0.5f.lit, 1.0f.lit, minDistToEdge / borderWidth)) * shimmerEffect)
+
+                SET(out,
+                    vec4(
+                        baseColor.x * alpha,
+                        baseColor.y * alpha,
+                        baseColor.z * alpha,
+                        alpha
+                    )
+                )
+            }.ELSE {
+                SET(out, vec4(0f.lit))
             }
         }
+    }
+
 
     override fun renderInternal(ctx: RenderContext) {
         val chunkStartX = (currentOffset.x.toInt() shr 4) - 2
