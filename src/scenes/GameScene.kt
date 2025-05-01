@@ -41,8 +41,6 @@ class Chunk(
     )
 
     fun render(ctx: RenderContext, tileSize: Double, xOffset: Double, yOffset: Double, textures: TexturesStore) {
-        val minerTexture = ctx.getTex(textures.miner)
-
         ctx.useBatcher { batcher ->
             for (x in 0..<16) {
                 for (y in 0..<16) {
@@ -70,29 +68,12 @@ class Chunk(
                         filtering = false
                     )
 
-                    // Render entities
-                    val entity = entities[x][y] ?: continue
-                    if (entity is Entity.Miner) {
-                        val minerTextureCoords = TextureCoords(
-                            minerTexture,
-                            RectCoords(
-                                entity.animationFrame / 7f, 0f,
-                                (entity.animationFrame + 1) / 7f, 0f,
-                                (entity.animationFrame + 1) / 7f, 1f,
-                                entity.animationFrame / 7f, 1f
-                            )
-                        )
-
-                        batcher.drawQuad(
-                            minerTextureCoords,
-                            ((x + xOffset) * tileSize).toFloat(),
-                            ((y + yOffset) * tileSize).toFloat(),
-                            tileSize.toFloat(),
-                            tileSize.toFloat(),
-                            blendMode = BlendMode.NORMAL,
-                            filtering = false
-                        )
-                    }
+                    entities[x][y]?.render(
+                        ctx,
+                        Point((x + xOffset) * tileSize, (y + yOffset) * tileSize),
+                        tileSize,
+                        textures
+                    )
                 }
             }
         }
