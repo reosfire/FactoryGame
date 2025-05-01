@@ -24,8 +24,8 @@ class NormalWorldGenerator : WorldGenerator {
     private val terrainScale = 0.1
 
     override fun generateChunk(x: Int, y: Int): Chunk {
-        val tiles = Array(16) { tileY->
-            Array(16) { tileX ->
+        val tiles = Array(16) { tileX->
+            Array(16) { tileY ->
                 val worldX = (x shl 4) + tileX
                 val worldY = (y shl 4) + tileY
 

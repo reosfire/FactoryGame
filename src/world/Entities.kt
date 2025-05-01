@@ -1,5 +1,6 @@
 package world
 
+import korlibs.image.bitmap.*
 import korlibs.korge.render.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
