@@ -6,6 +6,7 @@ import korlibs.korge.view.*
 import korlibs.math.geom.*
 import korlibs.math.geom.slice.*
 import scenes.*
+import utils.*
 
 enum class EntityType {
     Miner,
@@ -28,7 +29,7 @@ sealed class Entity {
         override fun tick(globalState: GlobalState) {
             animationFrame = (animationFrame + 1) % 7
             if (animationFrame == 0) {
-                globalState.money += 1
+                globalState.money.amount += BigInt.ONE
             }
         }
 

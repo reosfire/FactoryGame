@@ -19,6 +19,8 @@ import korlibs.math.geom.*
 import korlibs.math.geom.sin
 import korlibs.math.geom.slice.*
 import korlibs.time.*
+import korlibs.util.*
+import utils.*
 import world.*
 import kotlin.math.*
 
@@ -266,8 +268,25 @@ class WorldRenderer(
     }
 }
 
+const val log2_10 = 3.32192809489f
+
+class Money(
+    var amount: BigInt,
+) {
+    fun toScientificLikeString(): String {
+        val exponent = (amount.mostSignificant1Bit() / log2_10).toIntCeil() - 3
+        if (exponent < 0) return amount.toString()
+
+        val mantissa = amount / 10.toBigInt().pow(exponent)
+
+        val mantissaStr = mantissa.toString()
+        val exponentStr = if (exponent > 0) "e$exponent" else ""
+        return "$mantissaStr$exponentStr"
+    }
+}
+
 class GlobalState(
-    var money: Long = 100L,
+    var money: Money = Money(100.toBigInt()),
 )
 
 class GameScene : Scene() {
@@ -303,7 +322,7 @@ class GameScene : Scene() {
         debugOverlay = DebugOverlay()
         addChild(debugOverlay)
 
-        moneyText = Text("Money: ${globalState.money}", 24.0).apply {
+        moneyText = Text("Money: ${globalState.money.toScientificLikeString()}", 24.0).apply {
             position(10, 10)
             color = Colors.WHITE
         }
@@ -311,7 +330,7 @@ class GameScene : Scene() {
 
         addFixedUpdater((1 / 20f).seconds) {
             world.tick(globalState)
-            moneyText.text = "Money: ${globalState.money}"
+            moneyText.text = "Money: ${globalState.money.toScientificLikeString()}"
         }
 
         setupCameraControls()
@@ -434,8 +453,8 @@ class GameScene : Scene() {
                     if (tile.type == TileType.COAL_ORE && chunk.entities[localX][localY] == null) {
                         when (entitiesPicker.selectedEntity) {
                             EntityType.Miner -> {
-                                if (globalState.money >= 10) {
-                                    globalState.money -= 10
+                                if (globalState.money.amount >= BigInt.TEN) {
+                                    globalState.money.amount -= BigInt.TEN
                                     chunk.entities[localX][localY] = Entity.Miner(Point(x, y), 0)
                                 } else {
                                     println("Not enough money to place a miner!")
