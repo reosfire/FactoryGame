@@ -1,7 +1,6 @@
 package utils
 
-import korlibs.math.*
-import kotlin.math.abs
+import kotlin.math.*
 
 fun Long.toBigInt(): BigInt = BigInt.valueOf(this)
 fun Int.toBigInt(): BigInt = BigInt.valueOf(this.toLong())

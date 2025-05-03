@@ -5,24 +5,19 @@ import debug.*
 import korlibs.event.*
 import korlibs.graphics.*
 import korlibs.graphics.shader.*
-import korlibs.graphics.shader.gl.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
 import korlibs.korge.input.*
 import korlibs.korge.internal.*
 import korlibs.korge.render.*
-import korlibs.korge.render.SDFShaders.lit
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.math.*
 import korlibs.math.geom.*
-import korlibs.math.geom.sin
 import korlibs.math.geom.slice.*
 import korlibs.time.*
-import korlibs.util.*
 import utils.*
 import world.*
-import kotlin.math.*
 
 class TexturesStore(
     val grass: Bitmap,
@@ -117,6 +112,7 @@ fun Program.Builder.TEMP(initialValue: Operand): Temp {
 class WorldRenderer(
     val world: World,
     val textures: TexturesStore,
+    private val debugOverlay: DebugOverlay
 ) : View() {
     var tileDisplaySize: Double = 32.0
     var currentOffset: Point = Point(0, 0)
@@ -175,6 +171,8 @@ class WorldRenderer(
 
 
     override fun renderInternal(ctx: RenderContext) {
+        debugOverlay.countFrame()
+
         val chunkStartX = (currentOffset.x.toInt() shr 4) - 2
         val chunkStartY = (currentOffset.y.toInt() shr 4) - 2
         val chunksCountX = (screenSize.width / tileDisplaySize / 16).toInt() + 4
@@ -310,7 +308,8 @@ class GameScene : Scene() {
             coal = KR.tiles.atlas.coal.read(),
             miner = KR.extractor.read(),
         )
-        worldRenderer = WorldRenderer(world, textures)
+        debugOverlay = DebugOverlay()
+        worldRenderer = WorldRenderer(world, textures, debugOverlay)
         addChild(worldRenderer)
         onStageResized { width, height ->
             worldRenderer.screenSize = Size(width, height)
@@ -319,7 +318,6 @@ class GameScene : Scene() {
         entitiesPicker = EntitiesPicker(textures)
         addChild(entitiesPicker)
 
-        debugOverlay = DebugOverlay()
         addChild(debugOverlay)
 
         moneyText = Text("Money: ${globalState.money.toScientificLikeString()}", 24.0).apply {
@@ -328,9 +326,11 @@ class GameScene : Scene() {
         }
         addChild(moneyText)
 
-        addFixedUpdater((1 / 20f).seconds) {
+        addFixedUpdater((1 / 30f).seconds) {
             world.tick(globalState)
             moneyText.text = "Money: ${globalState.money.toScientificLikeString()}"
+
+            debugOverlay.countTick()
         }
 
         setupCameraControls()

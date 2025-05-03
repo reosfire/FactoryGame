@@ -1,6 +1,5 @@
 package world
 
-import korlibs.math.geom.*
 import scenes.*
 import kotlin.random.*
 
