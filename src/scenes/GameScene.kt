@@ -314,7 +314,10 @@ class GameScene : Scene() {
         worldRenderer.screenSize = size
         addChild(worldRenderer)
 
-        entitiesPicker = EntitiesPicker(textures)
+        entitiesPicker = EntitiesPicker(textures).apply {
+            alignLeftToLeftOf(this@sceneMain, 16.0)
+            alignBottomToBottomOf(this@sceneMain, 16.0)
+        }
         addChild(entitiesPicker)
 
         addChild(debugOverlay)

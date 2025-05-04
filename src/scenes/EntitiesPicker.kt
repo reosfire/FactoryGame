@@ -29,18 +29,18 @@ class EntitiesPicker(private val textures: TexturesStore) : View() {
         ctx.useBatcher { batch ->
             batch.drawQuad(
                 tex = ctx.getTex(Bitmaps.white),
-                x = padding,
-                y = padding,
-                width = buttonSize.toFloat(),
-                height = buttonSize.toFloat(),
+                x = pos.x.toFloat(),
+                y = pos.y.toFloat(),
+                width = (buttonSize + padding * 2).toFloat(),
+                height = (buttonSize + padding * 2).toFloat(),
                 colorMul = if (selectedEntity == EntityType.Miner) Colors["#CCCCCC"] else Colors["#888888"],
             )
             batch.drawQuad(
                 tex = minerIconTextureCoords,
-                x = padding + 4,
-                y = padding + 4,
-                width = (buttonSize - 8).toFloat(),
-                height = (buttonSize - 8).toFloat(),
+                x = pos.x.toFloat() + padding,
+                y = pos.y.toFloat() + padding,
+                width = buttonSize.toFloat(),
+                height = buttonSize.toFloat(),
                 filtering = false,
             )
         }
