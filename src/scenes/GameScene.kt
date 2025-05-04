@@ -12,6 +12,7 @@ import korlibs.korge.internal.*
 import korlibs.korge.render.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
+import korlibs.korge.view.align.*
 import korlibs.math.*
 import korlibs.math.geom.*
 import korlibs.math.geom.slice.*
@@ -26,17 +27,17 @@ class TexturesStore(
     val miner: Bitmap,
 )
 
+private val FULL_RECT_COORDINATES = RectCoords(
+    0f, 0f,
+    1f, 0f,
+    1f, 1f,
+    0f, 1f
+)
+
 class Chunk(
     val tiles: Array<Array<Tile>>,
     val entities: Array<Array<Entity?>>
 ) {
-    private val rectCoords = RectCoords(
-        0f, 0f,
-        1f, 0f,
-        1f, 1f,
-        0f, 1f
-    )
-
     fun render(ctx: RenderContext, tileSize: Double, xOffset: Double, yOffset: Double, textures: TexturesStore) {
         ctx.useBatcher { batcher ->
             for (x in 0..<16) {
@@ -52,7 +53,7 @@ class Chunk(
 
                     val textureCoords = TextureCoords(
                         tex,
-                        rectCoords
+                        FULL_RECT_COORDINATES
                     )
 
                     batcher.drawQuad(
@@ -310,10 +311,8 @@ class GameScene : Scene() {
         )
         debugOverlay = DebugOverlay()
         worldRenderer = WorldRenderer(world, textures, debugOverlay)
+        worldRenderer.screenSize = size
         addChild(worldRenderer)
-        onStageResized { width, height ->
-            worldRenderer.screenSize = Size(width, height)
-        }
 
         entitiesPicker = EntitiesPicker(textures)
         addChild(entitiesPicker)
@@ -321,14 +320,20 @@ class GameScene : Scene() {
         addChild(debugOverlay)
 
         moneyText = Text("Money: ${globalState.money.toScientificLikeString()}", 24.0).apply {
-            position(10, 10)
+            alignRightToRightOf(this@sceneMain, 16.0)
             color = Colors.WHITE
         }
         addChild(moneyText)
 
+        var prevMoneyLength = -1
         addFixedUpdater((1 / 30f).seconds) {
             world.tick(globalState)
-            moneyText.text = "Money: ${globalState.money.toScientificLikeString()}"
+            val currentMoneyText = "Money: ${globalState.money.toScientificLikeString()}"
+            moneyText.text = currentMoneyText
+            if (currentMoneyText.length != prevMoneyLength) {
+                moneyText.alignRightToRightOf(this@sceneMain, 16.0)
+                prevMoneyLength = currentMoneyText.length
+            }
 
             debugOverlay.countTick()
         }
@@ -337,6 +342,10 @@ class GameScene : Scene() {
         setupTileHoverInfo()
         setupEntityPlacement()
         setupDebugMode()
+    }
+
+    override fun onSizeChanged(size: Size) {
+        worldRenderer.screenSize = size
     }
 
     private fun SContainer.setupDebugMode() {

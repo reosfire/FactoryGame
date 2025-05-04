@@ -38,9 +38,8 @@ sealed class Entity {
             tileSize: Double,
             textures: TexturesStore
         ) {
-            val minerTexture = ctx.getTex(textures.miner)
             val minerTextureCoords = TextureCoords(
-                minerTexture,
+                ctx.getTex(textures.miner),
                 RectCoords(
                     animationFrame / 7f, 0f,
                     (animationFrame + 1) / 7f, 0f,
