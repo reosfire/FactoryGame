@@ -322,11 +322,10 @@ class GameScene : Scene() {
 
         addChild(debugOverlay)
 
-        moneyText = Text("Money: ${globalState.money.toScientificLikeString()}", 24.0).apply {
+        moneyText = text("Money: ${globalState.money.toScientificLikeString()}", 24.0) {
             alignRightToRightOf(this@sceneMain, 16.0)
             color = Colors.WHITE
         }
-        addChild(moneyText)
 
         var prevMoneyLength = -1
         addFixedUpdater((1 / 30f).seconds) {
@@ -341,6 +340,12 @@ class GameScene : Scene() {
             debugOverlay.countTick()
         }
 
+        onEvent(ReshapeEvent) {
+            moneyText.alignRightToRightOf(sceneView, 16.0)
+            entitiesPicker.alignLeftToLeftOf(sceneView, 16.0)
+            entitiesPicker.alignBottomToBottomOf(sceneView, 16.0)
+        }
+
         setupCameraControls()
         setupTileHoverInfo()
         setupEntityPlacement()
@@ -349,6 +354,7 @@ class GameScene : Scene() {
 
     override fun onSizeChanged(size: Size) {
         worldRenderer.screenSize = size
+        sceneView.size = size
     }
 
     private fun SContainer.setupDebugMode() {
