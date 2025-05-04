@@ -340,21 +340,17 @@ class GameScene : Scene() {
             debugOverlay.countTick()
         }
 
-        onEvent(ReshapeEvent) {
-            moneyText.alignRightToRightOf(sceneView, 16.0)
-            entitiesPicker.alignLeftToLeftOf(sceneView, 16.0)
-            entitiesPicker.alignBottomToBottomOf(sceneView, 16.0)
+        onStageResized { width, height ->
+            worldRenderer.screenSize = Size(width, height)
+
+            moneyText.xy(width - moneyText.width - 16.0, 16.0)
+            entitiesPicker.xy(16.0, height - entitiesPicker.height - 16.0)
         }
 
         setupCameraControls()
         setupTileHoverInfo()
         setupEntityPlacement()
         setupDebugMode()
-    }
-
-    override fun onSizeChanged(size: Size) {
-        worldRenderer.screenSize = size
-        sceneView.size = size
     }
 
     private fun SContainer.setupDebugMode() {
