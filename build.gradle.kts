@@ -1,4 +1,5 @@
 import korlibs.korge.gradle.*
+import korlibs.korge.gradle.targets.jvm.*
 
 plugins {
 	alias(libs.plugins.korge)
@@ -22,6 +23,9 @@ korge {
 	serializationJson()
 }
 
+tasks.named<KorgeJavaExec>("runJvm") {
+    logLevel = "trace"
+}
 
 dependencies {
     add("commonMainApi", project(":deps"))

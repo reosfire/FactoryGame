@@ -1,6 +1,13 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="runJvmAutoreload" type="GradleRunConfiguration" factoryName="Gradle">
+  <configuration default="false" name="runJvmAutoreloadDebugLogs" type="GradleRunConfiguration" factoryName="Gradle">
     <ExternalSystemSettings>
+      <option name="env">
+        <map>
+          <entry key="DEBUG_GLSL" value="true" />
+          <entry key="DEBUG_KORGE_RELOAD_AGENT" value="true" />
+          <entry key="LOG_GLSHADERCOMPILER" value="TRACE" />
+        </map>
+      </option>
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$" />
       <option name="externalSystemIdString" value="GRADLE" />
