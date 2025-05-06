@@ -5,8 +5,10 @@ import debug.*
 import korlibs.event.*
 import korlibs.graphics.*
 import korlibs.graphics.shader.*
+import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
+import korlibs.io.file.std.*
 import korlibs.korge.input.*
 import korlibs.korge.internal.*
 import korlibs.korge.render.*
@@ -21,9 +23,9 @@ import utils.*
 import world.*
 
 class TexturesStore(
-    val grass: Bitmap,
-    val water: Bitmap,
-    val coal: Bitmap,
+    val grass: BmpSlice,
+    val water: BmpSlice,
+    val coal: BmpSlice,
     val miner: Bitmap,
 )
 
@@ -49,15 +51,8 @@ class Chunk(
                         TileType.COAL_ORE -> textures.coal
                     }
 
-                    val tex = ctx.getTex(bitmap)
-
-                    val textureCoords = TextureCoords(
-                        tex,
-                        FULL_RECT_COORDINATES
-                    )
-
                     batcher.drawQuad(
-                        textureCoords,
+                        ctx.getTex(bitmap),
                         ((x + xOffset) * tileSize).toFloat(),
                         ((y + yOffset) * tileSize).toFloat(),
                         tileSize.toFloat(),
@@ -303,11 +298,13 @@ class GameScene : Scene() {
     override suspend fun SContainer.sceneMain() {
         world = World(NormalWorldGenerator())
 
+        val atlas = resourcesVfs["tiles.atlas.json"].readAtlas()
+
         val textures = TexturesStore(
-            grass = KR.tiles.atlas.grass.read(),
-            water = KR.tiles.atlas.water.read(),
-            coal = KR.tiles.atlas.coal.read(),
-            miner = KR.extractor.read(),
+            grass = atlas["grass.png"],
+            water = atlas["water.png"],
+            coal = atlas["coal.png"],
+            miner = KR.entities.extractor.read(),
         )
         debugOverlay = DebugOverlay()
         worldRenderer = WorldRenderer(world, textures, debugOverlay)
