@@ -93,18 +93,6 @@ class World(
     }
 }
 
-fun Program.Builder.TEMP(type: VarType, initialValue: Operand): Temp {
-    val temp = TEMP(type)
-    SET(temp, initialValue)
-    return temp
-}
-
-fun Program.Builder.TEMP(initialValue: Operand): Temp {
-    val temp = TEMP(initialValue.type)
-    SET(temp, initialValue)
-    return temp
-}
-
 class WorldRenderer(
     val world: World,
     val textures: TexturesStore,
@@ -169,10 +157,10 @@ class WorldRenderer(
     override fun renderInternal(ctx: RenderContext) {
         debugOverlay.countFrame()
 
-        val chunkStartX = (currentOffset.x.toInt() shr 4) - 2
-        val chunkStartY = (currentOffset.y.toInt() shr 4) - 2
-        val chunksCountX = (screenSize.width / tileDisplaySize / 16).toInt() + 4
-        val chunksCountY = (screenSize.height / tileDisplaySize / 16).toInt() + 4
+        val chunkStartX = (currentOffset.x.toInt() shr 4)
+        val chunkStartY = (currentOffset.y.toInt() shr 4)
+        val chunksCountX = (screenSize.width / tileDisplaySize / 16).toInt() + 2
+        val chunksCountY = (screenSize.height / tileDisplaySize / 16).toInt() + 2
 
         for (x in chunkStartX..<chunkStartX + chunksCountX) {
             for (y in chunkStartY..<chunkStartY + chunksCountY) {
