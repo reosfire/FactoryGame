@@ -157,10 +157,10 @@ class WorldRenderer(
     override fun renderInternal(ctx: RenderContext) {
         debugOverlay.countFrame()
 
-        val chunkStartX = (currentOffset.x.toInt() shr 4)
-        val chunkStartY = (currentOffset.y.toInt() shr 4)
-        val chunksCountX = (screenSize.width / tileDisplaySize / 16).toInt() + 2
-        val chunksCountY = (screenSize.height / tileDisplaySize / 16).toInt() + 2
+        val chunkStartX = (currentOffset.x / 16).toIntFloor()
+        val chunkStartY = (currentOffset.y / 16).toIntFloor()
+        val chunksCountX = (screenSize.width / tileDisplaySize / 16).toIntCeil() + 1
+        val chunksCountY = (screenSize.height / tileDisplaySize / 16).toIntCeil() + 1
 
         for (x in chunkStartX..<chunkStartX + chunksCountX) {
             for (y in chunkStartY..<chunkStartY + chunksCountY) {
