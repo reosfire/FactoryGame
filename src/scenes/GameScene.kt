@@ -128,16 +128,24 @@ class WorldRenderer(
             val baseColor = SelectorUniformBlock.color
             val frame = SelectorUniformBlock.frame
 
-            val distToEdgeX = min(abs(borderWidth - v_Tex.x), abs(1f.lit - borderWidth - v_Tex.x))
-            val distToEdgeY = min(abs(borderWidth - v_Tex.y), abs(1f.lit - borderWidth - v_Tex.y))
-            val minDistToEdge = TEMP(min(distToEdgeX, distToEdgeY))
+            // clamping returns the nearest point on the frame we are trying to draw
+            val clamped = clamp(v_Tex, borderWidth, 1f.lit - borderWidth)
+            // this distance defines a filled round corner rectangle
+            val outerCorrectDistance = distance(clamped, v_Tex)
 
-            IF (minDistToEdge.le(borderWidth)) {
+            // this distance defines a hollow rectangle
+            val innerDistancesVector = TEMP(min(v_Tex - borderWidth, 1f.lit - borderWidth - v_Tex))
+            val innerCorrectDistance = min(innerDistancesVector.x, innerDistancesVector.y)
+
+            // taking max of two distances works like intersection of this two shapes
+            val correctDistance = TEMP(max(innerCorrectDistance, outerCorrectDistance))
+
+            IF (correctDistance.le(borderWidth)) {
                 val shimmerPhase = frame * shimmerSpeed
 
                 val shimmerEffect = sin((v_Tex.x + v_Tex.y) * shimmerScale + shimmerPhase) * shimmerIntensity + shimmerBase
 
-                val alpha = TEMP((1f.lit - smoothstep(0.5f.lit, 1.0f.lit, minDistToEdge / borderWidth)) * shimmerEffect)
+                val alpha = TEMP((1f.lit - smoothstep(0.5f.lit, 1.0f.lit, correctDistance / borderWidth)) * shimmerEffect)
 
                 SET(out,
                     vec4(
