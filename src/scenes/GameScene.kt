@@ -24,6 +24,8 @@ import world.*
 
 class TexturesStore(
     val grass: BmpSlice,
+    val grassLine: BmpSlice,
+    val grassCorner: BmpSlice,
     val water: BmpSlice,
     val coal: BmpSlice,
     val miner: Bitmap,
@@ -297,7 +299,9 @@ class GameScene : Scene() {
         val atlas = resourcesVfs["tiles.atlas.json"].readAtlas()
 
         val textures = TexturesStore(
-            grass = atlas["grass.png"],
+            grass = atlas["grass.png"].slice(RectangleInt(0, 0, 16, 16)),
+            grassLine = atlas["grass_line.png"].slice(RectangleInt(16, 16, 16, 16)),
+            grassCorner = atlas["grass_corner.png"].slice(RectangleInt(32, 32, 16, 16)),
             water = atlas["water.png"],
             coal = atlas["coal.png"],
             miner = KR.entities.extractor.read(),
