@@ -59,6 +59,34 @@ class World(
             }
         }
     }
+
+    fun getTileAt(point: Point): Tile {
+        val x = point.x.toIntFloor()
+        val y = point.y.toIntFloor()
+
+        val chunkX = x shr 4
+        val chunkY = y shr 4
+
+        val chunk = getChunk(chunkX, chunkY)
+        val tileX = x and 0xF
+        val tileY = y and 0xF
+
+        return chunk.tiles[tileX][tileY]
+    }
+
+    fun getEntityAt(point: Point): Entity? {
+        val x = point.x.toIntFloor()
+        val y = point.y.toIntFloor()
+
+        val chunkX = x shr 4
+        val chunkY = y shr 4
+
+        val chunk = getChunk(chunkX, chunkY)
+        val tileX = x and 0xF
+        val tileY = y and 0xF
+
+        return chunk.entities[tileX][tileY]
+    }
 }
 
 class WorldRenderer(
@@ -158,7 +186,7 @@ class WorldRenderer(
             val screenX = ((pos.x - currentOffset.x) * tileDisplaySize).toFloat()
             val screenY = ((pos.y - currentOffset.y) * tileDisplaySize).toFloat()
 
-            val hasEntity = getEntityAt(pos) != null
+            val hasEntity = world.getEntityAt(pos) != null
 
             val highlightColor = if (hasEntity) Colors.YELLOW else Colors["#00FF00"]
             val lineWidth = if (hasEntity) 0.04f else 0.03f
@@ -189,34 +217,6 @@ class WorldRenderer(
             screenSize.width,
             screenSize.height,
         )
-    }
-
-    fun getTileAt(point: Point): Tile {
-        val x = point.x.toIntFloor()
-        val y = point.y.toIntFloor()
-
-        val chunkX = x shr 4
-        val chunkY = y shr 4
-
-        val chunk = world.getChunk(chunkX, chunkY)
-        val tileX = x and 0xF
-        val tileY = y and 0xF
-
-        return chunk.tiles[tileX][tileY]
-    }
-
-    fun getEntityAt(point: Point): Entity? {
-        val x = point.x.toIntFloor()
-        val y = point.y.toIntFloor()
-
-        val chunkX = x shr 4
-        val chunkY = y shr 4
-
-        val chunk = world.getChunk(chunkX, chunkY)
-        val tileX = x and 0xF
-        val tileY = y and 0xF
-
-        return chunk.entities[tileX][tileY]
     }
 
     fun screenPositionToWorldPosition(screenPos: Point): Point {
@@ -383,8 +383,8 @@ class GameScene : Scene() {
         mouse {
             onMove {
                 val worldScreenPos = worldRenderer.screenPositionToWorldPosition(it.currentPosLocal)
-                val tile = worldRenderer.getTileAt(worldScreenPos)
-                val entity = worldRenderer.getEntityAt(worldScreenPos)
+                val tile = worldRenderer.world.getTileAt(worldScreenPos)
+                val entity = worldRenderer.world.getEntityAt(worldScreenPos)
 
                 worldRenderer.hoveredTilePosition = Point(
                     worldScreenPos.x.toIntFloor(),

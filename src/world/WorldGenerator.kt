@@ -1,6 +1,5 @@
 package world
 
-import scenes.*
 import kotlin.random.*
 
 interface WorldGenerator {
@@ -12,7 +11,7 @@ class RandomWorldGenerator : WorldGenerator {
         val tiles = Array(16) { Array(16) { Tile.random() } }
         val entities = Array(16) { Array<Entity?>(16) { null } }
 
-        return Chunk(tiles, entities)
+        return Chunk(tiles, entities, x, y)
     }
 }
 
@@ -44,6 +43,6 @@ class NormalWorldGenerator : WorldGenerator {
             }
         }
 
-        return Chunk(tiles, entities)
+        return Chunk(tiles, entities, x, y)
     }
 }
