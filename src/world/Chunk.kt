@@ -162,48 +162,96 @@ class Chunk(
 
                     // Draw corner transitions with pre-rotated textures
                     if (!hasGrassNorth && !hasGrassEast && hasGrassNorthEast) {
-                        batcher.drawQuad(
-                            ctx.getTex(textures.grassCornerNE),
-                            tileX,
-                            tileY,
-                            tileWidth,
-                            tileWidth,
-                            blendMode = BlendMode.NORMAL,
-                            filtering = false
-                        )
+                        // Check if there are entities in the north or east tiles that would cut the corner
+                        val hasEntityNorth = when {
+                            y > 0 -> entities[x][y - 1] != null
+                            else -> world?.getChunk(chunkX, chunkY - 1)?.entities?.get(x)?.get(15) != null
+                        }
+                        val hasEntityEast = when {
+                            x < 15 -> entities[x + 1][y] != null
+                            else -> world?.getChunk(chunkX + 1, chunkY)?.entities?.get(0)?.get(y) != null
+                        }
+
+                        if (!hasEntityNorth || !hasEntityEast) {
+                            batcher.drawQuad(
+                                ctx.getTex(textures.grassCornerNE),
+                                tileX,
+                                tileY,
+                                tileWidth,
+                                tileWidth,
+                                blendMode = BlendMode.NORMAL,
+                                filtering = false
+                            )
+                        }
                     }
                     if (!hasGrassEast && !hasGrassSouth && hasGrassSouthEast) {
-                        batcher.drawQuad(
-                            ctx.getTex(textures.grassCornerSE),
-                            tileX,
-                            tileY,
-                            tileWidth,
-                            tileWidth,
-                            blendMode = BlendMode.NORMAL,
-                            filtering = false
-                        )
+                        // Check if there are entities in the south or east tiles that would cut the corner
+                        val hasEntitySouth = when {
+                            y < 15 -> entities[x][y + 1] != null
+                            else -> world?.getChunk(chunkX, chunkY + 1)?.entities?.get(x)?.get(0) != null
+                        }
+                        val hasEntityEast = when {
+                            x < 15 -> entities[x + 1][y] != null
+                            else -> world?.getChunk(chunkX + 1, chunkY)?.entities?.get(0)?.get(y) != null
+                        }
+
+                        if (!hasEntitySouth || !hasEntityEast) {
+                            batcher.drawQuad(
+                                ctx.getTex(textures.grassCornerSE),
+                                tileX,
+                                tileY,
+                                tileWidth,
+                                tileWidth,
+                                blendMode = BlendMode.NORMAL,
+                                filtering = false
+                            )
+                        }
                     }
                     if (!hasGrassSouth && !hasGrassWest && hasGrassSouthWest) {
-                        batcher.drawQuad(
-                            ctx.getTex(textures.grassCornerSW),
-                            tileX,
-                            tileY,
-                            tileWidth,
-                            tileWidth,
-                            blendMode = BlendMode.NORMAL,
-                            filtering = false
-                        )
+                        // Check if there are entities in the south or west tiles that would cut the corner
+                        val hasEntitySouth = when {
+                            y < 15 -> entities[x][y + 1] != null
+                            else -> world?.getChunk(chunkX, chunkY + 1)?.entities?.get(x)?.get(0) != null
+                        }
+                        val hasEntityWest = when {
+                            x > 0 -> entities[x - 1][y] != null
+                            else -> world?.getChunk(chunkX - 1, chunkY)?.entities?.get(15)?.get(y) != null
+                        }
+
+                        if (!hasEntitySouth || !hasEntityWest) {
+                            batcher.drawQuad(
+                                ctx.getTex(textures.grassCornerSW),
+                                tileX,
+                                tileY,
+                                tileWidth,
+                                tileWidth,
+                                blendMode = BlendMode.NORMAL,
+                                filtering = false
+                            )
+                        }
                     }
                     if (!hasGrassWest && !hasGrassNorth && hasGrassNorthWest) {
-                        batcher.drawQuad(
-                            ctx.getTex(textures.grassCornerNW),
-                            tileX,
-                            tileY,
-                            tileWidth,
-                            tileWidth,
-                            blendMode = BlendMode.NORMAL,
-                            filtering = false
-                        )
+                        // Check if there are entities in the north or west tiles that would cut the corner
+                        val hasEntityNorth = when {
+                            y > 0 -> entities[x][y - 1] != null
+                            else -> world?.getChunk(chunkX, chunkY - 1)?.entities?.get(x)?.get(15) != null
+                        }
+                        val hasEntityWest = when {
+                            x > 0 -> entities[x - 1][y] != null
+                            else -> world?.getChunk(chunkX - 1, chunkY)?.entities?.get(15)?.get(y) != null
+                        }
+
+                        if (!hasEntityNorth || !hasEntityWest) {
+                            batcher.drawQuad(
+                                ctx.getTex(textures.grassCornerNW),
+                                tileX,
+                                tileY,
+                                tileWidth,
+                                tileWidth,
+                                blendMode = BlendMode.NORMAL,
+                                filtering = false
+                            )
+                        }
                     }
                 }
             }
