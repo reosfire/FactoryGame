@@ -24,8 +24,14 @@ import world.*
 
 class TexturesStore(
     val grass: BmpSlice,
-    val grassLine: BmpSlice,
-    val grassCorner: BmpSlice,
+    val grassLineNorth: BmpSlice,
+    val grassLineEast: BmpSlice,
+    val grassLineSouth: BmpSlice,
+    val grassLineWest: BmpSlice,
+    val grassCornerNE: BmpSlice,
+    val grassCornerSE: BmpSlice,
+    val grassCornerSW: BmpSlice,
+    val grassCornerNW: BmpSlice,
     val water: BmpSlice,
     val coal: BmpSlice,
     val miner: Bitmap,
@@ -40,10 +46,12 @@ private val FULL_RECT_COORDINATES = RectCoords(
 
 class Chunk(
     val tiles: Array<Array<Tile>>,
-    val entities: Array<Array<Entity?>>
+    val entities: Array<Array<Entity?>>,
+    var world: World? = null
 ) {
     fun render(ctx: RenderContext, tileSize: Double, xOffset: Double, yOffset: Double, textures: TexturesStore) {
         ctx.useBatcher { batcher ->
+            // First pass: Draw base tiles
             for (x in 0..<16) {
                 for (y in 0..<16) {
                     val tile = tiles[x][y]
@@ -62,7 +70,186 @@ class Chunk(
                         blendMode = BlendMode.NONE,
                         filtering = false
                     )
+                }
+            }
+            
+            // Second pass: Draw transition tiles (grass edges and corners)
+            for (x in 0..<16) {
+                for (y in 0..<16) {
+                    val tile = tiles[x][y]
+                    
+                    // Skip if this tile is already grass
+                    if (tile.type != TileType.WATER) continue
+                    
+                    val tileX = ((x + xOffset) * tileSize).toFloat()
+                    val tileY = ((y + yOffset) * tileSize).toFloat()
+                    val tileWidth = tileSize.toFloat()
+                    
+                    // Get chunk coordinates for this chunk
+                    val currentChunkCoords = world?.loadedChunks?.entries?.find { it.value === this }?.key
+                    val chunkX = currentChunkCoords?.first ?: 0
+                    val chunkY = currentChunkCoords?.second ?: 0
+                    
+                    // Check adjacent tiles (N, E, S, W) with cross-chunk support
+                    val hasGrassNorth = when {
+                        y > 0 -> tiles[x][y - 1].type == TileType.GRASS
+                        else -> {
+                            // Check tile in the chunk above
+                            world?.getChunk(chunkX, chunkY - 1)?.tiles?.get(x)?.get(15)?.type == TileType.GRASS
+                        }
+                    }
+                    
+                    val hasGrassEast = when {
+                        x < 15 -> tiles[x + 1][y].type == TileType.GRASS
+                        else -> {
+                            // Check tile in the chunk to the right
+                            world?.getChunk(chunkX + 1, chunkY)?.tiles?.get(0)?.get(y)?.type == TileType.GRASS
+                        }
+                    }
+                    
+                    val hasGrassSouth = when {
+                        y < 15 -> tiles[x][y + 1].type == TileType.GRASS
+                        else -> {
+                            // Check tile in the chunk below
+                            world?.getChunk(chunkX, chunkY + 1)?.tiles?.get(x)?.get(0)?.type == TileType.GRASS
+                        }
+                    }
+                    
+                    val hasGrassWest = when {
+                        x > 0 -> tiles[x - 1][y].type == TileType.GRASS
+                        else -> {
+                            // Check tile in the chunk to the left
+                            world?.getChunk(chunkX - 1, chunkY)?.tiles?.get(15)?.get(y)?.type == TileType.GRASS
+                        }
+                    }
+                    
+                    // Check diagonal tiles with cross-chunk support
+                    val hasGrassNorthEast = when {
+                        y > 0 && x < 15 -> tiles[x + 1][y - 1].type == TileType.GRASS
+                        y > 0 && x == 15 -> world?.getChunk(chunkX + 1, chunkY)?.tiles?.get(0)?.get(y - 1)?.type == TileType.GRASS
+                        y == 0 && x < 15 -> world?.getChunk(chunkX, chunkY - 1)?.tiles?.get(x + 1)?.get(15)?.type == TileType.GRASS
+                        else -> world?.getChunk(chunkX + 1, chunkY - 1)?.tiles?.get(0)?.get(15)?.type == TileType.GRASS
+                    }
+                    
+                    val hasGrassSouthEast = when {
+                        y < 15 && x < 15 -> tiles[x + 1][y + 1].type == TileType.GRASS
+                        y < 15 && x == 15 -> world?.getChunk(chunkX + 1, chunkY)?.tiles?.get(0)?.get(y + 1)?.type == TileType.GRASS
+                        y == 15 && x < 15 -> world?.getChunk(chunkX, chunkY + 1)?.tiles?.get(x + 1)?.get(0)?.type == TileType.GRASS
+                        else -> world?.getChunk(chunkX + 1, chunkY + 1)?.tiles?.get(0)?.get(0)?.type == TileType.GRASS
+                    }
+                    
+                    val hasGrassSouthWest = when {
+                        y < 15 && x > 0 -> tiles[x - 1][y + 1].type == TileType.GRASS
+                        y < 15 && x == 0 -> world?.getChunk(chunkX - 1, chunkY)?.tiles?.get(15)?.get(y + 1)?.type == TileType.GRASS
+                        y == 15 && x > 0 -> world?.getChunk(chunkX, chunkY + 1)?.tiles?.get(x - 1)?.get(0)?.type == TileType.GRASS
+                        else -> world?.getChunk(chunkX - 1, chunkY + 1)?.tiles?.get(15)?.get(0)?.type == TileType.GRASS
+                    }
+                    
+                    val hasGrassNorthWest = when {
+                        y > 0 && x > 0 -> tiles[x - 1][y - 1].type == TileType.GRASS
+                        y > 0 && x == 0 -> world?.getChunk(chunkX - 1, chunkY)?.tiles?.get(15)?.get(y - 1)?.type == TileType.GRASS
+                        y == 0 && x > 0 -> world?.getChunk(chunkX, chunkY - 1)?.tiles?.get(x - 1)?.get(15)?.type == TileType.GRASS
+                        else -> world?.getChunk(chunkX - 1, chunkY - 1)?.tiles?.get(15)?.get(15)?.type == TileType.GRASS
+                    }
+                    
+                    // Draw line transitions with pre-rotated textures
+                    if (hasGrassNorth) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassLineNorth),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                    if (hasGrassEast) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassLineEast),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                    if (hasGrassSouth) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassLineSouth),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                    if (hasGrassWest) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassLineWest),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                    
+                    // Draw corner transitions with pre-rotated textures
+                    if (!hasGrassNorth && !hasGrassEast && hasGrassNorthEast) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassCornerNE),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                    if (!hasGrassEast && !hasGrassSouth && hasGrassSouthEast) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassCornerSE),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                    if (!hasGrassSouth && !hasGrassWest && hasGrassSouthWest) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassCornerSW),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                    if (!hasGrassWest && !hasGrassNorth && hasGrassNorthWest) {
+                        batcher.drawQuad(
+                            ctx.getTex(textures.grassCornerNW),
+                            tileX,
+                            tileY,
+                            tileWidth,
+                            tileWidth,
+                            blendMode = BlendMode.NORMAL,
+                            filtering = false
+                        )
+                    }
+                }
+            }
 
+            // Third pass: Draw entities
+            for (x in 0..<16) {
+                for (y in 0..<16) {
+                    // Finally render entities on top
                     entities[x][y]?.render(
                         ctx,
                         Point((x + xOffset) * tileSize, (y + yOffset) * tileSize),
@@ -81,7 +268,11 @@ class World(
     val loadedChunks = mutableMapOf<Pair<Int, Int>, Chunk>()
 
     fun getChunk(x: Int, y: Int): Chunk {
-        return loadedChunks.getOrPut(Pair(x, y)) { generator.generateChunk(x, y) }
+        return loadedChunks.getOrPut(Pair(x, y)) { 
+            generator.generateChunk(x, y).also { chunk -> 
+                chunk.world = this 
+            }
+        }
     }
 
     fun tick(globalState: GlobalState) {
@@ -298,12 +489,35 @@ class GameScene : Scene() {
 
         val atlas = resourcesVfs["tiles.atlas.json"].readAtlas()
 
+        // Base textures
+        val grassTexture = atlas["grass.png"].slice(RectangleInt(0, 0, 16, 16))
+        val waterTexture = atlas["water.png"]
+        val coalTexture = atlas["coal.png"]
+        
+        // Pre-rotated grass line textures
+        val grassLineNorth = atlas["grass.png"].slice(RectangleInt(16, 0, 16, 16))
+        val grassLineEast = atlas["grass.png"].slice(RectangleInt(32, 0, 16, 16))
+        val grassLineSouth = atlas["grass.png"].slice(RectangleInt(0, 16, 16, 16))
+        val grassLineWest = atlas["grass.png"].slice(RectangleInt(16, 16, 16, 16))
+        
+        // Pre-rotated grass corner textures
+        val grassCornerNE = atlas["grass.png"].slice(RectangleInt(0, 32, 16, 16))
+        val grassCornerSE = atlas["grass.png"].slice(RectangleInt(16, 32, 16, 16))
+        val grassCornerSW = atlas["grass.png"].slice(RectangleInt(32, 32, 16, 16))
+        val grassCornerNW = atlas["grass.png"].slice(RectangleInt(32, 16, 16, 16))
+
         val textures = TexturesStore(
-            grass = atlas["grass.png"].slice(RectangleInt(0, 0, 16, 16)),
-            grassLine = atlas["grass_line.png"].slice(RectangleInt(16, 16, 16, 16)),
-            grassCorner = atlas["grass_corner.png"].slice(RectangleInt(32, 32, 16, 16)),
-            water = atlas["water.png"],
-            coal = atlas["coal.png"],
+            grass = grassTexture,
+            grassLineNorth = grassLineNorth,
+            grassLineEast = grassLineEast,
+            grassLineSouth = grassLineSouth,
+            grassLineWest = grassLineWest,
+            grassCornerNE = grassCornerNE,
+            grassCornerSE = grassCornerSE,
+            grassCornerSW = grassCornerSW,
+            grassCornerNW = grassCornerNW,
+            water = waterTexture,
+            coal = coalTexture,
             miner = KR.entities.extractor.read(),
         )
         debugOverlay = DebugOverlay()
