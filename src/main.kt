@@ -1,9 +1,7 @@
 import korlibs.image.color.*
 import korlibs.korge.*
-import korlibs.korge.internal.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
-import korlibs.math.geom.*
 import scenes.*
 
 suspend fun main(): Unit = Korge(

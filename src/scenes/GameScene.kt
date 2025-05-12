@@ -17,7 +17,6 @@ import korlibs.korge.view.*
 import korlibs.korge.view.align.*
 import korlibs.math.*
 import korlibs.math.geom.*
-import korlibs.math.geom.slice.*
 import korlibs.time.*
 import utils.*
 import world.*

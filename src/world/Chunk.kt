@@ -1,6 +1,5 @@
 package world
 
-import korlibs.graphics.*
 import korlibs.image.bitmap.*
 import korlibs.korge.blend.*
 import korlibs.korge.render.*
